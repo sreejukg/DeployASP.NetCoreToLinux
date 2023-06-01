@@ -1,0 +1,97 @@
+
+
+#Connect to Linux virtual machine through SSH
+ssh -i C:\Users\localuser\Downloads\LinuxWebsiteVM_key.pem linuxwebsiteuser@20.232.114.9
+# Copy the files from local windows folder to Linux virtual machine through SCP, -r means recursive here
+scp -r -i C:\Users\localuser\Downloads\LinuxWebsiteVM_key.pem C:\Builds\LinuxWebsite linuxwebsiteuser@20.232.114.9:~/linuxwebsite/
+# install ASP.Net Core runtime
+sudo apt-get update
+sudo apt-get install -y aspnetcore-runtime-7.0
+#Copy the website files from the Home folder to the Var folder
+sudo cp -a ~/linuxwebsite/ /var/
+#list files ton ensure that the files are copied correctly.
+ls /var/linuxwebsite
+
+#run the website under a particular port
+dotnet /var/linuxwebsite/MyLinuxWebsite.dll --urls "http://localhost:5001" 
+
+#now open another powershell and SSH to the VM 
+curl localhost:5001
+wget localhost:5001
+
+# create a service file for the LinuxWebsite
+sudo vi /etc/systemd/system/linuxwebsite.service
+#sample file content for the service
+################################################################    
+[Unit]
+Description= My Linux Website on ASP.Net Core 7.0
+
+[Service]
+WorkingDirectory=/var/linuxwebsite
+ExecStart=/usr/bin/dotnet /var/linuxwebsite/MyLinuxWebsite.dll
+Restart=always
+# Restart service after 10 seconds if the dotnet service crashes:
+RestartSec=10
+KillSignal=SIGINT
+SyslogIdentifier=dotnet-example
+User=www-data
+Environment=ASPNETCORE_ENVIRONMENT=Production
+Environment=DOTNET_PRINT_TELEMETRY_MESSAGE=false
+
+[Install]
+WantedBy=multi-user.target
+################################################################                                   
+
+#view the service file
+cat /etc/systemd/system/linuxwebsite.service
+#enable the service
+sudo systemctl enable linuxwebsite.service
+#start the service.
+sudo systemctl start linuxwebsite.service
+#restart the service.
+sudo systemctl restart linuxwebsite.service
+#check the service status
+systemctl status ebuilderadmin.service
+#to reload the file after editing
+sudo systemctl daemon-reload
+
+
+#install nginx
+sudo apt install nginx
+#nginx check
+whereis nginx
+#start nginx
+sudo systemctl start nginx
+#verify localhost
+curl localhost
+wget localhost
+
+
+
+#host the site under nginx in a particular port
+
+#print nginx default configuration
+cat /etc/nginx/nginx.conf
+
+#list the contents in conf.d folder
+ls /etc/nginx/conf.d
+#list the contents in sites-enabled folder
+ls /etc/nginx/sites-enabled
+#to view the detault configuration under sites-enabled
+cat /etc/nginx/sites-enabled/default
+#backup default-configuration 
+cp /etc/nginx/sites-enabled/default ~/nginx-default-backup
+#edit the sites-enabled configuration to route to ebuilder admin from external domain
+sudo vi /etc/nginx/sites-enabled/default
+##################################################
+ location / {
+                proxy_pass http://localhost:8001;
+
+        }
+# also comment root 
+#################################################
+
+# verify configuration is ok
+sudo nginx -t
+#restart nginx to apply the changes.
+sudo systemctl restart nginx
